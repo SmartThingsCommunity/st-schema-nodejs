@@ -1,0 +1,3 @@
+--recursive
+--reporter progress
+--timeout 2000

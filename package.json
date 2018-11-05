@@ -1,0 +1,42 @@
+{
+  "name": "st-schema",
+  "version": "1.0.0",
+  "description": "SmartThings Schema for C2C integration",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "coverage": "nyc --all --check-coverage --reporter=lcov --reporter=text --reporter=text-summary npm test",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix --max-warnings 0 --cache",
+    "test": "mocha"
+  },
+  "keywords": [
+    "smartthings",
+    "st-schema",
+    "smartthings-schema"
+  ],
+  "author": "SmartThings",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "lodash": "4.17.11",
+    "request": "2.88.0"
+  },
+  "devDependencies": {
+    "chai": "4.2.0",
+    "mocha": "5.2.0",
+    "nyc": "13.0.1",
+    "rewire": "4.0.1",
+    "sinon": "6.3.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SmartThingsCommunity/st-schema-nodejs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SmartThingsCommunity/st-schema-nodejs/issues"
+  },
+  "homepage": "https://github.com/SmartThingsCommunity/st-schema-nodejs#readme"
+}
