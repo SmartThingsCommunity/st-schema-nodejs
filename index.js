@@ -14,5 +14,6 @@
 
 module.exports = {
   lambda: require('./lib/lambda'),
-  partnerHelper: require('./lib/partnerHelper')
+  partnerHelper: require('./lib/partnerHelper'),
+  CommandResponse: require('./lib/state/CommandResponse')
 };
