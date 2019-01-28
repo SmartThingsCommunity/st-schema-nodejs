@@ -34,7 +34,7 @@ describe('DiscoveryDevice', function() {
       objectUnderTest.should.be.instanceOf(Device);
       objectUnderTest.should.have.property('externalDeviceId').equal(testDeviceId);
       objectUnderTest.should.have.property('friendlyName').equal(testFriendlyName);
-      objectUnderTest.should.have.property('deviceType').equal(testDeviceType);
+      objectUnderTest.should.have.property('deviceHandlerType').equal(testDeviceType);
     });
   });
 

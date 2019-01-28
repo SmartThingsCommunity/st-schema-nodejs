@@ -37,7 +37,6 @@ describe('StateDevice', function() {
       objectUnderTest.should.exist;
       objectUnderTest.should.be.instanceOf(Device);
       objectUnderTest.should.have.property('externalDeviceId').equal(testDeviceId);
-      objectUnderTest.should.have.property('deviceCookie').equal(testDeviceCookie);
       objectUnderTest.should.not.have.property('states');
     });
   });
