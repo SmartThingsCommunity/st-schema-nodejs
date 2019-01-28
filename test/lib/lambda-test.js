@@ -19,7 +19,6 @@ const sinon = require('sinon');
 const rewire = require('rewire');
 const lambda = rewire('../../lib/lambda');
 
-const responseBuilder = require('../../utils/response_builder');
 const DiscoveryResponse = require('../../lib/discovery/DiscoveryResponse');
 const CommandResponse = require('../../lib/state/CommandResponse');
 const StateRefreshResponse = require('../../lib/state/StateRefreshResponse');
