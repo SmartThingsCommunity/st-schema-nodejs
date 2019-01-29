@@ -1,14 +1,14 @@
 /**
- *	Copyright 2018 SmartThings
+ *  Copyright 2018 SmartThings
  *
- *	Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
- *	in compliance with the License. You may obtain a copy of the License at:
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
  *
- *		http://www.apache.org/licenses/LICENSE-2.0
+ *  	http://www.apache.org/licenses/LICENSE-2.0
  *
- *	Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
- *	on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- *	for the specific language governing permissions and limitations under the License.
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
  *
  */
 
@@ -19,33 +19,29 @@ const sinon = require('sinon');
 const rewire = require('rewire');
 const lambda = rewire('../../lib/lambda');
 
-const responseBuilder = require('../../utils/response_builder');
 const DiscoveryResponse = require('../../lib/discovery/DiscoveryResponse');
 const CommandResponse = require('../../lib/state/CommandResponse');
 const StateRefreshResponse = require('../../lib/state/StateRefreshResponse');
 
 const testRequestId = 'aaa-bbb-ccc';
-const testContext = {};
+const sandbox = sinon.createSandbox();
 
 function createEvent(interactionType, requestId) {
-  const body = {
+  return {
     headers: {
       interactionType,
       requestId
     }
   };
-  return {
-    body: JSON.stringify(body)
-  };
 }
 
 describe('lambda:createResponse', function() {
-  const sandbox = sinon.createSandbox();
   const createResponse = lambda.__get__('createResponse');
+  const testContext = {};
 
-afterEach(function() {
-  sandbox.restore();
-});
+  afterEach(function() {
+    sandbox.restore();
+  });
 
   it('Should create discovery response given discovery request', async function() {
     const response = createResponse('discoveryRequest', testRequestId);
@@ -62,22 +58,26 @@ afterEach(function() {
     response.should.be.instanceOf(CommandResponse);
   });
 
-  it('Should not create any response given callback interaction type', async function() {
-    const response = createResponse('callbackRequest', testRequestId);
-    should.not.exist(response);
+  it('Should throw error given unknownRequest interaction type', async function() {
+    const response = createResponse('unknownRequest', testRequestId);
+    response.globalError.errorEnum.should.be.equal("UNKNOWN-ERROR");
+    response.globalError.detail.should.be.equal("error interaction type");
   });
 
-  it('Should not create any response given unknown interaction type', async function() {
-    const response = createResponse('unknown', testRequestId);
-    should.not.exist(response);
+  it('Should throw error given grantCallbackAccess interaction type', async function() {
+    const response = createResponse('grantCallbackAccess', testRequestId);
+    response.globalError.errorEnum.should.be.equal("UNKNOWN-ERROR");
+    response.globalError.detail.should.be.equal("grantCallbackAccess type not implemented in st-schema-nodejs helper");
   });
+
 });
 
 describe('lambda', function() {
-  const sandbox = sinon.createSandbox();
   let lambdaOpts;
+  let testContext;
 
   beforeEach(function() {
+    testContext = {};
     lambdaOpts = {
       discoveryRequest: sandbox.stub().resolves(),
       commandRequest: sandbox.stub().resolves(),
@@ -90,92 +90,72 @@ describe('lambda', function() {
     sandbox.restore();
   });
 
-  it('Should fail given invalid JSON body', async function() {
-    const event = {
-      body: 'NOT JSON'
-    };
-
-    const mock = sandbox.mock(lambda.__get__('responseBuilder'));
-    mock.expects('badRequest')
-        .withArgs(undefined, 'Failed to parse POST body');
+  it('Should fail given empty JSON body', function(done) {
+    const event = {};
 
     const objectUnderTest = lambda(lambdaOpts);
-    const p = objectUnderTest(event, testContext);
-
-    mock.verify();
-    mock.restore();
-
-    return p;
+    testContext.succeed = done;
+    testContext.fail = (response) => {
+        response.globalError.errorEnum.should.be.equal("UNKNOWN-ERROR");
+        response.globalError.detail.should.be.equal("invalid ST schema");
+        done();
+    };
+    objectUnderTest(event, testContext)
+        .catch(done);
   });
 
-  it('Should fail given unknown interaction type', async function() {
+  it('Should fail given unknown interaction type', function(done) {
     const interactionType = 'unknown';
     const event = createEvent(interactionType, testRequestId);
 
-    const mock = sandbox.mock(lambda.__get__('responseBuilder'));
-    mock.expects('badRequest')
-        .withArgs(testRequestId, interactionType + ' has not been implemented');
-
     const objectUnderTest = lambda(lambdaOpts);
-    const p = objectUnderTest(event, testContext);
 
-    mock.verify();
-    mock.restore();
+    testContext.succeed = sandbox.stub().throws("Should not be called");
+    testContext.fail = (response) => {
+        response.globalError.errorEnum.should.be.equal("UNKNOWN-ERROR");
+        response.globalError.detail.should.be.equal("error interaction type");
+        done();
+    };
 
-    return p;
+    objectUnderTest(event, testContext)
+        .catch(done);
   });
 
-  it('Should fail given unimplemented interaction type', async function() {
-    const interactionType = 'callbackRequest';
+  it('Should fail given unimplemented interaction type', function(done) {
+    const interactionType = 'grantCallbackAccess';
     const event = createEvent(interactionType, testRequestId);
 
-    const mockCreateResponse = sandbox.stub();
-    const revert = lambda.__set__('createResponse', mockCreateResponse);
-
-    const mock = sandbox.mock(lambda.__get__('responseBuilder'));
-    mock.expects('badRequest')
-        .withArgs(testRequestId, 'Invalid request ' + interactionType);
-
     const objectUnderTest = lambda(lambdaOpts);
-    const p = objectUnderTest(event, testContext);
 
-    mock.verify();
-    mock.restore();
-    revert();
+    testContext.succeed = sandbox.stub().throws("Should not be called");
+    testContext.fail = (response) => {
+        response.globalError.errorEnum.should.be.equal("UNKNOWN-ERROR");
+        response.globalError.detail.should.be.equal("grantCallbackAccess type not implemented in st-schema-nodejs helper");
+        done();
+    };
 
-    return p;
+    objectUnderTest(event, testContext)
+        .catch(done);
   });
 
-  it.skip('Should fail given the interaction type request fails', async function() {
+  it('Should fail given the interaction type request fails', function(done) {
     const interactionType = 'discoveryRequest';
     const event = createEvent(interactionType, testRequestId);
 
     const expectedError = new Error('TEST');
     lambdaOpts.discoveryRequest = sandbox.stub().rejects(expectedError);
 
-    const mockResponse = sandbox.stub();
-    const mockCreateResponse = sandbox.stub().returns(mockResponse);
-
-    const mockBuilder = {
-      error: sandbox.stub()
-        .withArgs(testRequestId, 500, expectedError.message, 'Failed to make the request')
-        .returns(expectedError.message)
-    }
-
-    const revert = lambda.__set__({
-      'createResponse': mockCreateResponse,
-      'responseBuilder': mockBuilder
-    });
-
     const objectUnderTest = lambda(lambdaOpts);
-    const p = objectUnderTest(event, testContext)
-                .then(message => {
-                  message.should.be.equal(expectedError.message);
-                });
 
-    revert(); 
+    testContext.succeed = sandbox.stub().throws("Should not be called");
+    testContext.fail = (response) => {
+        response.globalError.errorEnum.should.be.equal("UNKNOWN-ERROR");
+        response.globalError.detail.should.be.equal(expectedError.message);
+        done();
+    };
 
-    return p;
+    objectUnderTest(event, testContext)
+        .catch(done);
   });
 
 });
