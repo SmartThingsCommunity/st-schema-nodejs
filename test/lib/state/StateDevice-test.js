@@ -24,6 +24,8 @@ const testComponent = 'test-component';
 const testCapability = 'test-capability';
 const testAttribute = 'test-attribute';
 const testValue = 9999;
+const testUnit = 'rad'
+const testData = {modes: ['x','y','z']}
 
 describe('StateDevice', function() {
   let objectUnderTest;
@@ -54,13 +56,17 @@ describe('StateDevice', function() {
         testComponent,
         testCapability,
         testAttribute,
-        testValue
+        testValue,
+        testUnit,
+        testData
       );
       objectUnderTest.states.should.have.lengthOf(1);
       state.should.have.property('component').equal(testComponent);
       state.should.have.property('capability').equal(testCapability);
       state.should.have.property('attribute').equal(testAttribute);
       state.should.have.property('value').equal(testValue);
+      state.should.have.property('unit').equal(testUnit);
+      state.should.have.property('data').equal(testData);
     });
   });
 
