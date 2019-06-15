@@ -20,9 +20,22 @@ const Device = require('../../../lib/state/StateDevice');
 const testType = 'TEST-type';
 const testRequestId = 'TEST-1234';
 const testDeviceId = 'aaa-bbb-ccc';
-const testDeviceCookie = {
-  something: 'anything'
-}
+const testDeviceCookie = {myData: 'xyz'}
+const testDeviceStates = [
+  {
+    component: 'main',
+    capability: 'st.switch',
+    attribute: 'switch',
+    value: 'off'
+  },
+  {
+    component: 'main',
+    capability: 'st.thermostatFanMode',
+    attribute: 'thermostatFanMode',
+    value: 'auto',
+    data: {supportedThermostatFanModes: ['auto', 'on']}
+  }
+];
 
 describe('StateResponse', function() {
   let objectUnderTest;
@@ -42,12 +55,54 @@ describe('StateResponse', function() {
   });
 
   describe('addDevice', function() {
-    it('Should add a device given id and cookie', function() {
-      const device = objectUnderTest.addDevice(testDeviceId, testDeviceCookie);
+    it('Should add a device given id', function() {
+      const device = objectUnderTest.addDevice(testDeviceId);
       device.should.exist;
       device.should.be.instanceOf(Device);
       objectUnderTest.should.have.property('deviceState').with.lengthOf(1);
       objectUnderTest.deviceState[0].should.equal(device);
+    });
+  });
+
+  describe('addDeviceAndCookie', function() {
+    it('Should add a device given id', function() {
+      const device = objectUnderTest.addDevice(testDeviceId).addCookie(testDeviceCookie);
+      device.should.exist;
+      device.should.be.instanceOf(Device);
+      objectUnderTest.should.have.property('deviceState').with.lengthOf(1);
+      objectUnderTest.deviceState[0].should.equal(device);
+      objectUnderTest.deviceState[0].should.have.property('cookie');
+      objectUnderTest.deviceState[0].cookie.should.have.property('myData');
+      objectUnderTest.deviceState[0].cookie.myData.should.equal(testDeviceCookie.myData);
+    });
+  });
+
+  describe('addDeviceWithStates', function() {
+    it('Should add a device given id and state', function() {
+      const device = objectUnderTest.addDevice(testDeviceId, testDeviceStates);
+      device.should.exist;
+      device.should.be.instanceOf(Device);
+      objectUnderTest.should.have.property('deviceState').with.lengthOf(1);
+      objectUnderTest.deviceState[0].should.equal(device);
+
+      objectUnderTest.deviceState[0].should.have.property('states').with.lengthOf(2);
+      objectUnderTest.deviceState[0].states[0].should.equal(testDeviceStates[0]);
+      objectUnderTest.deviceState[0].states[1].should.equal(testDeviceStates[1]);
+    });
+  });
+
+  describe('addDeviceWithStatesAndCookie', function() {
+    it('Should add a device given id and state', function() {
+      const device = objectUnderTest.addDevice(testDeviceId, testDeviceStates).addCookie(testDeviceCookie);
+      device.should.exist;
+      device.should.be.instanceOf(Device);
+      objectUnderTest.should.have.property('deviceState').with.lengthOf(1);
+      objectUnderTest.deviceState[0].should.equal(device);
+      objectUnderTest.deviceState[0].cookie.should.have.property('myData');
+      objectUnderTest.deviceState[0].cookie.myData.should.equal(testDeviceCookie.myData);
+      objectUnderTest.deviceState[0].should.have.property('states').with.lengthOf(2);
+      objectUnderTest.deviceState[0].states[0].should.equal(testDeviceStates[0]);
+      objectUnderTest.deviceState[0].states[1].should.equal(testDeviceStates[1]);
     });
   });
 
