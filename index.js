@@ -19,5 +19,7 @@ module.exports = {
   StateRefreshResponse: require('./lib/state/StateRefreshResponse'),
   CommandResponse: require('./lib/state/CommandResponse'),
   StateUpdateRequest: require('./lib/callbacks/StateUpdateRequest'),
-  SchemaConnector: require('./lib/SchemaConnector')
+  SchemaConnector: require('./lib/SchemaConnector'),
+  GlobalErrorTypes: require('./lib/errors/global-error-types'),
+  DeviceErrorTypes: require('./lib/errors/device-error-types')
 };

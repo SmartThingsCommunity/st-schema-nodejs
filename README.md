@@ -55,13 +55,13 @@ const connector = new SchemaConnector()
 ## Minimal loopback connector example
 This simple connector creates a one dimmer device named _Test Dimmer_. There's no physical
 device involved. The connector command handler simply returns the state value corresponding to 
-the issues command. The current state of the device is stored in memory, so if the server
+the issued command. The current state of the device is stored in memory, so if the server
 is restarted the states will revert to their initial value. This implementation does not 
 implement proactive state callbacks.
 
 #### connector.js
 ```javascript
-const {SchemaConnector} = require('st-schema')
+const {SchemaConnector, DeviceErrorTypes} = require('st-schema')
 const deviceStates = { switch: 'off', level: 100}
 const connector = new SchemaConnector()
   .discoveryHandler((accessToken, response) => {
@@ -85,27 +85,30 @@ const connector = new SchemaConnector()
   })
   .commandHandler((accessToken, response, devices) => {
     for (const device of devices) {
-      response.addDevice(device.externalDeviceId, device.commands.map( cmd => {
-        if (cmd.command === 'setLevel') {
-          deviceStates.level = cmd.arguments[0];
-          return {
-            component: cmd.component,
-            capability: cmd.capability,
-            attribute: 'level',
-            value: deviceStates.level
-          }
+      const deviceResponse = response.addDevice(device.externalDeviceId);
+      for (cmd of device.commands) {
+        const state = {
+          component: cmd.component,
+          capability: cmd.capability
+        };
+        if (cmd.capability === 'st.switchLevel' && cmd.command === 'setLevel') {
+          state.attribute = 'level';
+          state.value = deviceStates.level = cmd.arguments[0];
+          deviceResponse.addState(state);
+
+        } else if (cmd.capability === 'st.switch') {
+          state.attribute = 'switch';
+          state.value = deviceStates.switch = cmd.command === 'on' ? 'on' : 'off';
+          deviceResponse.addState(state);
+
         } else {
-          deviceStates.switch = cmd.command === 'on' ? 'on' : 'off';
-          return {
-            component: cmd.component,
-            capability: cmd.capability,
-            attribute: 'switch',
-            value: deviceStates.switch
-          }
+          deviceResponse.setError(
+            `Command '${cmd.command} of capability '${cmd.capability}' not supported`,
+            DeviceErrorTypes.CAPABILITY_NOT_SUPPORTED)
         }
-      }))
+      }
     }
-});
+  });
 
 module.exports = connector
 ```
@@ -168,7 +171,7 @@ the callbacks and exposing a web-service endpoint for executing device commands.
 The connector app is now initialized with the ST Schema connector's client ID and secret, which are available from
 the Developer workspace. It also declares an `accessTokens` map to contain the list of connectors that need to be
 called when device state changes. Note that this simple implementation stores the connectors in memory, so restarting
-the sever will cause them to be lost. The app also has new `callbackAccessHandler` and `integrationDeletedHandler`
+the server will cause them to be lost. The app also has new `callbackAccessHandler` and `integrationDeletedHandler`
 handlers defined to add and remove entries from the `accessTokens` map.
 ```javascript
 const {SchemaConnector} = require('st-schema')
@@ -198,33 +201,35 @@ const connector = new SchemaConnector()
   })
   .commandHandler((accessToken, response, devices) => {
     for (const device of devices) {
-      response.addDevice(device.externalDeviceId, device.commands.map(cmd => {
-        if (cmd.command === 'setLevel') {
-          deviceStates.level = cmd.arguments[0];
-          return {
-            component: cmd.component,
-            capability: cmd.capability,
-            attribute: 'level',
-            value: deviceStates.level
-          }
+      const deviceResponse = response.addDevice(device.externalDeviceId);
+      for (cmd of device.commands) {
+        const state = {
+          component: cmd.component,
+          capability: cmd.capability
+        };
+        if (cmd.capability === 'st.switchLevel' && cmd.command === 'setLevel') {
+          state.attribute = 'level';
+          state.value = deviceStates.level = cmd.arguments[0];
+          deviceResponse.addState(state);
+
+        } else if (cmd.capability === 'st.switch') {
+          state.attribute = 'switch';
+          state.value = deviceStates.switch = cmd.command === 'on' ? 'on' : 'off';
+          deviceResponse.addState(state);
+
         } else {
-          deviceStates.switch = cmd.command === 'on' ? 'on' : 'off';
-          return {
-            component: cmd.component,
-            capability: cmd.capability,
-            attribute: 'switch',
-            value: deviceStates.switch
-          }
+          deviceResponse.setError(
+            `Command '${cmd.command} of capability '${cmd.capability}' not supported`,
+            DeviceErrorTypes.CAPABILITY_NOT_SUPPORTED)
         }
-      }))
+      }
     }
   })
-  .callbackAccessHandler(async (accessToken, callbackAuthentication, callbackUrls) => {
+  .callbackAccessHandler((accessToken, callbackAuthentication, callbackUrls) => {
     accessTokens[accessToken] = {
       callbackAuthentication,
       callbackUrls
     }
-    console.log(`accessTokens=${JSON.stringify(accessTokens, null, 2)}`)
   })
 
   .integrationDeletedHandler(accessToken => {

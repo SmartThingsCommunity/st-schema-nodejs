@@ -3,7 +3,6 @@
 const SchemaConnector = require('../../lib/SchemaConnector');
 const AccessTokenRequest = require('../../lib/callbacks/AccessTokenRequest');
 const sinon = require('sinon');
-const rp = require('request-promise-native');
 
 const testClientId = 'xxxx';
 const testClientSecret = 'yyyy';
@@ -58,7 +57,7 @@ describe('SchemaConnector', function() {
 
   describe('discoveryHandlerRequest', function() {
     it('Should return proper discovery response', async function() {
-      const response = await schemaConnector.handleMockCallback({
+      const response = await schemaConnector.handleCallback({
         "headers": {
           "schema": "st-schema",
           "version": "1.0",
@@ -88,6 +87,10 @@ describe('SchemaConnector', function() {
   describe('grantCallbackAccess', function() {
     it('Should return proper state refresh response', async function() {
 
+      const grantAccessToken = "eyJhbGciOiJIUzM4NCJ9.MDcyNmRlNDYtNTIzYS00MjlmLWI4MTktODE5NDViODY1MTU1.aLkqFJFmzbrWQNcqsemE_ZHRW8n1Oi1Xrvo_4aB_q7vsUKk03z4rpi-XbyLQ285o";
+      const grantRefreshToken = "eyJhbGciOiJIUzM4NCJ9.ZWQ0YzM1ODQtNjA3My00MWViLTkxZTctNDU3ZWNhZmQ2NThm.IAX_H7mFZMHF2PVguvPxHMU8I2-UqDLmszVTDTKWnLVWD64OKm3pYGXWCcFqbQvZ";
+      const grantCode = "eyJhbGciOiJIUzM4NCJ9.MTFlZTdlMTMtZjQ1My00YTI0LWI2ZTktZTY4MGU4ZDU4NDIx.pVSGwU1hWKFuA4Snzk_vacZH1luHDQgGGaClgPZ4vpULPu35aXtBp6aURNYElxyl"
+
       let expectedAccessToken = 'UNDEFINED';
       let expectedCallbackAuthentication = {};
       let expectedCallbackUrls = {};
@@ -104,25 +107,23 @@ describe('SchemaConnector', function() {
       const stub = sinon.stub(AccessTokenRequest.prototype, 'getCallbackToken').callsFake(async function(url, code) {
         tokenUrl = url;
         tokenCode = code;
-        return new Promise((resolve, reject) => {
-          resolve({
-            "headers": {
-              "schema": "st-schema",
-              "version": "1.0",
-              "interactionType": "accessTokenResponse",
-              "requestId": "E68C91AB-0ED7-48B2-8FFC-036282FBD607"
-            },
-            "callbackAuthentication": {
-              "tokenType": "Bearer",
-              "accessToken": "eyJhbGciOiJIUzM4NCJ9.MDcyNmRlNDYtNTIzYS00MjlmLWI4MTktODE5NDViODY1MTU1.aLkqFJFmzbrWQNcqsemE_ZHRW8n1Oi1Xrvo_4aB_q7vsUKk03z4rpi-XbyLQ285o",
-              "refreshToken": "eyJhbGciOiJIUzM4NCJ9.ZWQ0YzM1ODQtNjA3My00MWViLTkxZTctNDU3ZWNhZmQ2NThm.IAX_H7mFZMHF2PVguvPxHMU8I2-UqDLmszVTDTKWnLVWD64OKm3pYGXWCcFqbQvZ",
-              "expiresIn": 86400
-            }
-          })
-        })
+        return {
+          "headers": {
+            "schema": "st-schema",
+            "version": "1.0",
+            "interactionType": "accessTokenResponse",
+            "requestId": "E68C91AB-0ED7-48B2-8FFC-036282FBD607"
+          },
+          "callbackAuthentication": {
+            "tokenType": "Bearer",
+            "accessToken": grantAccessToken,
+            "refreshToken": grantRefreshToken,
+            "expiresIn": 86400
+          }
+        }
       });
 
-      const response = await schemaConnector.handleMockCallback({
+      const response = await schemaConnector.handleCallback({
         "headers": {
           "schema": "st-schema",
           "version": "1.0",
@@ -136,7 +137,7 @@ describe('SchemaConnector', function() {
         "callbackAuthentication": {
           "grantType": "authorization_code",
           "scope": "callback-access",
-          "code": "eyJhbGciOiJIUzM4NCJ9.MTFlZTdlMTMtZjQ1My00YTI0LWI2ZTktZTY4MGU4ZDU4NDIx.pVSGwU1hWKFuA4Snzk_vacZH1luHDQgGGaClgPZ4vpULPu35aXtBp6aURNYElxyl",
+          "code": grantCode,
           "clientId": "xxxx"
         },
         "callbackUrls": {
@@ -146,12 +147,12 @@ describe('SchemaConnector', function() {
       });
 
       tokenUrl.should.equal('https://c2c-us.smartthings.com/oauth/token');
-      tokenCode.should.equal('eyJhbGciOiJIUzM4NCJ9.MTFlZTdlMTMtZjQ1My00YTI0LWI2ZTktZTY4MGU4ZDU4NDIx.pVSGwU1hWKFuA4Snzk_vacZH1luHDQgGGaClgPZ4vpULPu35aXtBp6aURNYElxyl');
+      tokenCode.should.equal(grantCode);
 
       expectedAccessToken.should.equal('ACCT-HCtR4Q');
       expectedCallbackAuthentication.tokenType.should.equal('Bearer');
-      expectedCallbackAuthentication.accessToken.should.equal('eyJhbGciOiJIUzM4NCJ9.MDcyNmRlNDYtNTIzYS00MjlmLWI4MTktODE5NDViODY1MTU1.aLkqFJFmzbrWQNcqsemE_ZHRW8n1Oi1Xrvo_4aB_q7vsUKk03z4rpi-XbyLQ285o');
-      expectedCallbackAuthentication.refreshToken.should.equal('eyJhbGciOiJIUzM4NCJ9.ZWQ0YzM1ODQtNjA3My00MWViLTkxZTctNDU3ZWNhZmQ2NThm.IAX_H7mFZMHF2PVguvPxHMU8I2-UqDLmszVTDTKWnLVWD64OKm3pYGXWCcFqbQvZ');
+      expectedCallbackAuthentication.accessToken.should.equal(grantAccessToken);
+      expectedCallbackAuthentication.refreshToken.should.equal(grantRefreshToken);
       expectedCallbackAuthentication.expiresIn.should.equal(86400);
 
       expectedCallbackUrls.oauthToken.should.equal('https://c2c-us.smartthings.com/oauth/token');
@@ -162,7 +163,7 @@ describe('SchemaConnector', function() {
 
   describe('stateRefreshRequest', function() {
     it('Should return proper state refresh response', async function() {
-      const response = await schemaConnector.handleMockCallback({
+      const response = await schemaConnector.handleCallback({
         "headers": {
           "schema": "st-schema",
           "version": "1.0",
@@ -194,7 +195,7 @@ describe('SchemaConnector', function() {
 
   describe('commandRequestOn', function() {
     it('Should return proper on command response', async function() {
-      const response = await schemaConnector.handleMockCallback({
+      const response = await schemaConnector.handleCallback({
         "headers": {
           "schema": "st-schema",
           "version": "1.0",
@@ -240,7 +241,7 @@ describe('SchemaConnector', function() {
 
   describe('commandRequestOff', function() {
     it('Should return proper off command response response', async function() {
-      const response = await schemaConnector.handleMockCallback({
+      const response = await schemaConnector.handleCallback({
         "headers": {
           "schema": "st-schema",
           "version": "1.0",
@@ -284,8 +285,8 @@ describe('SchemaConnector', function() {
   });
 
   describe('invalidRequest', function() {
-    it('Should return proper discovery response', async function() {
-      const response = await schemaConnector.handleMockCallback({
+    it('Should return proper error response', async function() {
+      const response = await schemaConnector.handleCallback({
         "item": {
           "tokenType": "Bearer",
           "token": "ACCT-HCtR4Q"
@@ -296,6 +297,63 @@ describe('SchemaConnector', function() {
       response.headers.schema.should.equal('st-schema');
       response.headers.version.should.equal('1.0');
       response.isError().should.equal(true);
+      response.should.have.property('globalError');
+      response.globalError.errorEnum.should.equal('BAD-REQUEST')
+    });
+  });
+
+  describe('invalidInteractionType', function() {
+    it('Should return proper error response', async function() {
+      const response = await schemaConnector.handleCallback({
+        "headers": {
+          "schema": "st-schema",
+          "version": "1.0",
+          "interactionType": "someOtherRequest",
+          "requestId": "3d41b3d6-b328-68b8-351a-8c0c2303adb1"
+        }
+      });
+
+      response.should.have.property('headers');
+      response.headers.schema.should.equal('st-schema');
+      response.headers.version.should.equal('1.0');
+      response.isError().should.equal(true);
+      response.should.have.property('globalError');
+      response.globalError.errorEnum.should.equal('INVALID-INTERACTION-TYPE')
+    });
+  });
+
+  describe('invalidGrantCallbackAccess', function() {
+    it('Should return proper error response', async function() {
+
+      const response = await schemaConnector.handleCallback({
+        "headers": {
+          "schema": "st-schema",
+          "version": "1.0",
+          "interactionType": "grantCallbackAccess",
+          "requestId": "8C58E0CD-386F-4BBB-80B9-B28A7FF8040F"
+        },
+        "authentication": {
+          "tokenType": "Bearer",
+          "token": "ACCT-HCtR4Q"
+        },
+        "callbackAuthentication": {
+          "grantType": "authorization_code",
+          "scope": "callback-access",
+          "code": "eyJhbGciOiJIUzM4NCJ9.MTFlZTdlMTMtZjQ1My00YTI0LWI2ZTktZTY4MGU4ZDU4NDIx.pVSGwU1hWKFuA4Snzk_vacZH1luHDQgGGaClgPZ4vpULPu35aXtBp6aURNYElxyl",
+          "clientId": "pdq"
+        },
+        "callbackUrls": {
+          "oauthToken": "https://c2c-us.smartthings.com/oauth/token",
+          "stateCallback": "https://c2c-us.smartthings.com/device/events"
+        }
+      });
+
+      response.should.have.property('headers');
+      response.headers.schema.should.equal('st-schema');
+      response.headers.version.should.equal('1.0');
+      response.isError().should.equal(true);
+      response.should.have.property('globalError');
+      response.globalError.errorEnum.should.equal('INVALID-CLIENT')
     });
   });
 });
