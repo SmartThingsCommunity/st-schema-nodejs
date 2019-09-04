@@ -20,12 +20,13 @@ const connector = new SchemaConnector()
      * @response {DiscoveryResponse} Discovery response object
      */
   })
-  .stateRefreshHandler((accessToken, response) => {
+  .stateRefreshHandler((accessToken, response, devices) => {
     /**
      * State refresh request. Respond with the current states of all devices. Called after
      * device discovery runs.
      * @accessToken External cloud access token
      * @response {StateRefreshResponse} StateRefresh response object
+     * @devices {array} List of ST device needing a state update
      */
   })
   .commandHandler((accessToken, response, devices) => {
@@ -73,21 +74,23 @@ const connector = new SchemaConnector()
   .discoveryHandler((accessToken, response) => {
     response.addDevice('external-device-1', 'Test Dimmer', 'c2c-dimmer');
   })
-  .stateRefreshHandler((accessToken, response) => {
-    response.addDevice('external-device-1', [
-      {
-        component: 'main',
-        capability: 'st.switch',
-        attribute: 'switch',
-        value: deviceStates.switch
-      },
-      {
-        component: 'main',
-        capability: 'st.switchLevel',
-        attribute: 'level',
-        value: deviceStates.level
-      }
-    ]);
+  .stateRefreshHandler((accessToken, response, devices) => {
+    for (const device of devices) {
+      response.addDevice(device.externalDeviceId, [
+        {
+          component: 'main',
+          capability: 'st.switch',
+          attribute: 'switch',
+          value: deviceStates.switch
+        },
+        {
+          component: 'main',
+          capability: 'st.switchLevel',
+          attribute: 'level',
+          value: deviceStates.level
+        }
+      ]);
+    }
   })
   .commandHandler((accessToken, response, devices) => {
     for (const device of devices) {
@@ -108,9 +111,7 @@ const connector = new SchemaConnector()
           deviceResponse.addState(state);
         } else {
           deviceResponse.setError(
-            `Command '${cmd.command} of capability '${
-              cmd.capability
-            }' not supported`,
+            `Command '${cmd.command} of capability '${cmd.capability}' not supported`,
             DeviceErrorTypes.CAPABILITY_NOT_SUPPORTED
           );
         }
@@ -193,21 +194,23 @@ const connector = new SchemaConnector()
   .discoveryHandler((accessToken, response) => {
     response.addDevice('external-device-1', 'Test Dimmer', 'c2c-dimmer');
   })
-  .stateRefreshHandler((accessToken, response) => {
-    response.addDevice('external-device-1', [
-      {
-        component: 'main',
-        capability: 'st.switch',
-        attribute: 'switch',
-        value: deviceStates.switch
-      },
-      {
-        component: 'main',
-        capability: 'st.switchLevel',
-        attribute: 'level',
-        value: deviceStates.level
-      }
-    ]);
+  .stateRefreshHandler((accessToken, response, devices) => {
+    for (const device of devices) {
+      response.addDevice(device.externalDeviceId, [
+        {
+          component: 'main',
+          capability: 'st.switch',
+          attribute: 'switch',
+          value: deviceStates.switch
+        },
+        {
+          component: 'main',
+          capability: 'st.switchLevel',
+          attribute: 'level',
+          value: deviceStates.level
+        }
+      ]);
+    }
   })
   .commandHandler((accessToken, response, devices) => {
     for (const device of devices) {
@@ -228,9 +231,7 @@ const connector = new SchemaConnector()
           deviceResponse.addState(state);
         } else {
           deviceResponse.setError(
-            `Command '${cmd.command} of capability '${
-              cmd.capability
-            }' not supported`,
+            `Command '${cmd.command} of capability '${cmd.capability}' not supported`,
             DeviceErrorTypes.CAPABILITY_NOT_SUPPORTED
           );
         }
@@ -272,21 +273,23 @@ const connector = new SchemaConnector()
   .discoveryHandler((accessToken, response) => {
     response.addDevice('external-device-1', 'Test Dimmer', 'c2c-dimmer');
   })
-  .stateRefreshHandler((accessToken, response) => {
-    response.addDevice('external-device-1', [
-      {
-        component: 'main',
-        capability: 'st.switch',
-        attribute: 'switch',
-        value: deviceStates.switch
-      },
-      {
-        component: 'main',
-        capability: 'st.switchLevel',
-        attribute: 'level',
-        value: deviceStates.level
-      }
-    ]);
+  .stateRefreshHandler((accessToken, response, devices) => {
+    for (const device of devices) {
+      response.addDevice(device.externalDeviceId, [
+        {
+          component: 'main',
+          capability: 'st.switch',
+          attribute: 'switch',
+          value: deviceStates.switch
+        },
+        {
+          component: 'main',
+          capability: 'st.switchLevel',
+          attribute: 'level',
+          value: deviceStates.level
+        }
+      ]);
+    }
   })
   .commandHandler((accessToken, response, devices) => {
     for (const device of devices) {
