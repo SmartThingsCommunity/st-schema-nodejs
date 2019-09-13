@@ -4,6 +4,7 @@ const SchemaConnector = require('../../lib/SchemaConnector');
 const AccessTokenRequest = require('../../lib/callbacks/AccessTokenRequest');
 const sinon = require('sinon');
 
+let interactionResultCount = 0;
 const testClientId = 'xxxx';
 const testClientSecret = 'yyyy';
 const testCallbackUrls = {
@@ -45,6 +46,9 @@ const schemaConnector = new SchemaConnector()
   })
   .integrationDeletedHandler(accessToken => {
     delete accessTokens[accessToken]
+  })
+  .interactionResultHandler(accessToken => {
+    interactionResultCount++
   });
 
 describe('SchemaConnector', function() {
@@ -354,6 +358,41 @@ describe('SchemaConnector', function() {
       response.isError().should.equal(true);
       response.should.have.property('globalError');
       response.globalError.errorEnum.should.equal('INVALID-CLIENT')
+    });
+  });
+
+  describe('interactionResultTest', function() {
+    it('Should properly handle an interaction result request', async function() {
+      const response = await schemaConnector.handleCallback({
+        "headers": {
+          "schema": "st-schema",
+          "version": "1.0",
+          "interactionType": "interactionResult",
+          "requestId": "FCDBB024-6785-4518-A27F-4593CCE0387B"
+        },
+        "authentication": {
+          "tokenType": "Bearer",
+          "token": "1OCdvY6XCHVKPuQXEMQYjHwd"
+        },
+        "deviceState": [
+          {
+            "externalDeviceId": "00955ee8-f54e-4ccd-8698-83fe162cab5b",
+            "deviceError": [
+              {
+                "errorEnum": 400,
+                "detail": "manufacturerInfo, manufacturerName/modelName missing"
+              }
+            ]
+          }
+        ]
+      });
+
+      response.should.have.property('headers');
+      response.headers.schema.should.equal('st-schema');
+      response.headers.version.should.equal('1.0');
+      response.headers.interactionType.should.equal('interactionResult');
+      response.headers.requestId.should.equal('FCDBB024-6785-4518-A27F-4593CCE0387B');
+      interactionResultCount.should.equal(1)
     });
   });
 });
