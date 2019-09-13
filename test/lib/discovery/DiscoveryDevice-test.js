@@ -23,7 +23,7 @@ const testDeviceType = 'test type';
 
 describe('DiscoveryDevice', function() {
   let objectUnderTest;
-  
+
   beforeEach(function() {
     objectUnderTest = new Device(testDeviceId, testFriendlyName, testDeviceType);
   });
@@ -36,6 +36,11 @@ describe('DiscoveryDevice', function() {
       objectUnderTest.should.have.property('friendlyName').equal(testFriendlyName);
       objectUnderTest.should.have.property('deviceHandlerType').equal(testDeviceType);
     });
+  });
+
+  describe('deviceUniqueId', async function() {
+    objectUnderTest.deviceUniqueId('xyz123');
+    objectUnderTest.should.have.property('deviceUniqueId').equal('xyz123');
   });
 
   let testcases = [{
