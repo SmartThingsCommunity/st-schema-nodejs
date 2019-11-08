@@ -15,11 +15,13 @@
 module.exports = {
   lambda: require('./lib/lambda'),
   partnerHelper: require('./lib/partnerHelper'),
-  DiscoveryResponse: require('./lib/discovery/DiscoveryResponse'),
-  StateRefreshResponse: require('./lib/state/StateRefreshResponse'),
   CommandResponse: require('./lib/state/CommandResponse'),
-  StateUpdateRequest: require('./lib/callbacks/StateUpdateRequest'),
-  SchemaConnector: require('./lib/SchemaConnector'),
+  DeviceErrorTypes: require('./lib/errors/device-error-types'),
   GlobalErrorTypes: require('./lib/errors/global-error-types'),
-  DeviceErrorTypes: require('./lib/errors/device-error-types')
+  DiscoveryDevice: require('./lib/discovery/DiscoveryDevice'),
+  DiscoveryRequest: require('./lib/callbacks/DiscoveryRequest'),
+  DiscoveryResponse: require('./lib/discovery/DiscoveryResponse'),
+  SchemaConnector: require('./lib/SchemaConnector'),
+  StateRefreshResponse: require('./lib/state/StateRefreshResponse'),
+  StateUpdateRequest: require('./lib/callbacks/StateUpdateRequest')
 };

@@ -39,6 +39,7 @@ describe('DiscoveryDevice', function() {
   });
 
   describe('deviceUniqueId', async function() {
+    objectUnderTest = new Device(testDeviceId, testFriendlyName, testDeviceType);
     objectUnderTest.deviceUniqueId('xyz123');
     objectUnderTest.should.have.property('deviceUniqueId').equal('xyz123');
   });

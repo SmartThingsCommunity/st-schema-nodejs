@@ -35,7 +35,7 @@ describe('StateUpdateRequest', function() {
       const objectUnderTest = new StateUpdateRequest(testClientId, testClientSecret);
       objectUnderTest.should.be.instanceOf(StateUpdateRequest);
       const {headers} = objectUnderTest;
-      headers.should.have.property('interactionType').equal('callback');
+      headers.should.have.property('interactionType').equal('stateCallback');
     });
   });
 
