@@ -288,12 +288,32 @@ describe('SchemaConnector', function() {
     });
   });
 
-  describe('invalidRequest', function() {
+  describe('invalidRequest : missing headers', function() {
     it('Should return proper error response', async function() {
       const response = await schemaConnector.handleCallback({
         "item": {
           "tokenType": "Bearer",
           "token": "ACCT-HCtR4Q"
+        }
+      });
+
+      response.should.have.property('headers');
+      response.headers.schema.should.equal('st-schema');
+      response.headers.version.should.equal('1.0');
+      response.isError().should.equal(true);
+      response.should.have.property('globalError');
+      response.globalError.errorEnum.should.equal('BAD-REQUEST')
+    });
+  });
+
+  describe('invalidRequest : missing authentication', function() {
+    it('Should return proper error response', async function() {
+      const response = await schemaConnector.handleCallback({
+        "headers": {
+          "schema": "st-schema",
+          "version": "1.0",
+          "interactionType": "discoverRequest",
+          "requestId": "3d41b3d6-b328-68b8-351a-8c0c2303adb1"
         }
       });
 
@@ -314,6 +334,10 @@ describe('SchemaConnector', function() {
           "version": "1.0",
           "interactionType": "someOtherRequest",
           "requestId": "3d41b3d6-b328-68b8-351a-8c0c2303adb1"
+        },
+        "authentication": {
+          "tokenType": "Bearer",
+          "token": "ACCT-HCtR4Q"
         }
       });
 
