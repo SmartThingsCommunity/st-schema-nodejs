@@ -66,6 +66,8 @@ const deviceStates = { switch: 'off', level: 100}
 const connector = new SchemaConnector()
   .discoveryHandler((accessToken, response) => {
     response.addDevice('external-device-1', 'Test Dimmer', 'c2c-dimmer')
+      .manufacturerName('Example Connector')
+      .modelName('Virtual Dimmer');
   })
   .stateRefreshHandler((accessToken, response) => {
     response.addDevice('external-device-1', [
@@ -174,14 +176,16 @@ called when device state changes. Note that this simple implementation stores th
 the server will cause them to be lost. The app also has new `callbackAccessHandler` and `integrationDeletedHandler`
 handlers defined to add and remove entries from the `accessTokens` map.
 ```javascript
-const {SchemaConnector} = require('st-schema')
-const deviceStates = {switch: 'off', level: 100}
-const accessTokens = {}
+const {SchemaConnector} = require('st-schema');
+const deviceStates = {switch: 'off', level: 100};
+const accessTokens = {};
 const connector = new SchemaConnector()
   .clientId(process.env.ST_CLIENT_ID)
   .clientSecret(process.env.ST_CLIENT_SECRET)
   .discoveryHandler((accessToken, response) => {
     response.addDevice('external-device-1', 'Test Dimmer', 'c2c-dimmer')
+      .manufacturerName('Example Connector')
+      .modelName('Virtual Dimmer');
   })
   .stateRefreshHandler((accessToken, response) => {
     response.addDevice('external-device-1', [
@@ -241,75 +245,64 @@ module.exports = {
   deviceStates: deviceStates,
   accessTokens: accessTokens
 };
+
 ```
 
 #### server.js
 
-The web server is modified to add a new `/commands` endpoint for turning on and off the switch. It expects
-a body of the form `{"attribute": "switch", "value": "on"}`. 
-```javascript
-const {SchemaConnector} = require('st-schema')
-const deviceStates = {switch: 'off', level: 100}
-const accessTokens = {}
-const connector = new SchemaConnector()
-  .clientId(process.env.ST_CLIENT_ID)
-  .clientSecret(process.env.ST_CLIENT_SECRET)
-  .discoveryHandler((accessToken, response) => {
-    response.addDevice('external-device-1', 'Test Dimmer', 'c2c-dimmer')
-  })
-  .stateRefreshHandler((accessToken, response) => {
-    response.addDevice('external-device-1', [
-      {
-        component: 'main',
-        capability: 'st.switch',
-        attribute: 'switch',
-        value: deviceStates.switch
-      },
-      {
-        component: 'main',
-        capability: 'st.switchLevel',
-        attribute: 'level',
-        value: deviceStates.level
-      }
-    ])
-  })
-  .commandHandler((accessToken, response, devices) => {
-    for (const device of devices) {
-      response.addDevice(device.externalDeviceId, device.commands.map(cmd => {
-        if (cmd.command === 'setLevel') {
-          deviceStates.level = cmd.arguments[0];
-          return {
-            component: cmd.component,
-            capability: cmd.capability,
-            attribute: 'level',
-            value: deviceStates.level
-          }
-        } else {
-          deviceStates.switch = cmd.command === 'on' ? 'on' : 'off';
-          return {
-            component: cmd.component,
-            capability: cmd.capability,
-            attribute: 'switch',
-            value: deviceStates.switch
-          }
-        }
-      }))
-    }
-  })
-  .callbackAccessHandler(async (accessToken, callbackAuthentication, callbackUrls) => {
-    accessTokens[accessToken] = {
-      callbackAuthentication,
-      callbackUrls
-    }
-  })
-  .integrationDeletedHandler(accessToken => {
-    delete accessTokens[accessToken]
-  });
-;
+The web server is modified to add a new `/command` endpoint for turning on and off the switch. It expects
+a JSON body of the form `{"attribute": "switch", "value": "on"}`. 
 
-module.exports = {
-  connector: connector,
-  deviceStates: deviceStates,
-  accessTokens: accessTokens
-};
+```javascript
+"use strict";
+require('dotenv').config();
+const express = require('express');
+const {StateUpdateRequest} = require('st-schema');
+const {connector, deviceStates, accessTokens} = require('./app');
+const server = express();
+const port = 3001;
+server.use(express.json());
+
+server.post('/', (req, res) => {
+  if (accessTokenIsValid(req)) {
+    connector.handleHttpCallback(req, res)
+  }
+});
+
+server.post('/command', (req, res) => {
+  deviceStates[req.body.attribute] = req.body.value;
+  for (const accessToken of Object.keys(accessTokens)) {
+    const item = accessTokens[accessToken];
+    const updateRequest = new StateUpdateRequest(process.env.ST_CLIENT_ID, process.env.ST_CLIENT_SECRET);
+    const deviceState = [
+      {
+        externalDeviceId: 'external-device-1',
+        states: [
+          {
+            component: 'main',
+            capability: req.body.attribute === 'level' ? 'st.switchLevel' : 'st.switch',
+            attribute: req.body.attribute,
+            value: req.body.value
+          }
+        ]
+      }
+    ];
+    updateRequest.updateState(item.callbackUrls, item.callbackAuthentication, deviceState)
+  }
+  res.send({});
+  res.end()
+});
+
+
+function accessTokenIsValid(req) {
+  // Replace with proper validation of issued access token
+  if (req.body.authentication && req.body.authentication.token) {
+    return true;
+  }
+  res.status(401).send('Unauthorized');
+  return false;
+}
+
+server.listen(port);
+console.log(`Server listening on http://127.0.0.1:${port}`);
 ```
