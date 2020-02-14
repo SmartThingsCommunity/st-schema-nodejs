@@ -16,6 +16,27 @@ const textCallbackAuth = {
   refreshToken: 'yyyy-bbbb'
 };
 
+class HttpResponse {
+  status (code) {
+    this.statusCode = code
+    return this
+  }
+
+  send(data) {
+    this.data = data
+  }
+}
+
+class LambdaContext {
+  succeed(data) {
+    this.success = data
+  }
+
+  fail(data) {
+    this.failure = data
+  }
+}
+
 const schemaConnector = new SchemaConnector()
   .clientId(testClientId)
   .clientSecret(testClientSecret)
@@ -45,11 +66,19 @@ const schemaConnector = new SchemaConnector()
     }
   })
   .integrationDeletedHandler(accessToken => {
-    delete accessTokens[accessToken]
+    delete textCallbackAuth.accessToken
   })
   .interactionResultHandler(accessToken => {
     interactionResultCount++
   });
+
+const errorConnector = new SchemaConnector()
+  .clientId(testClientId)
+  .clientSecret(testClientSecret)
+  .discoveryHandler((accessToken, response) => {
+    throw Error('Error handling discovery request')
+  })
+
 
 describe('SchemaConnector', function() {
 
@@ -419,4 +448,184 @@ describe('SchemaConnector', function() {
       interactionResultCount.should.equal(1)
     });
   });
+
+  describe('integrationDeleted', function() {
+    it('Should properly handle an integration delete request', async function() {
+      schemaConnector.enableEventLogging()
+      const response = await schemaConnector.handleCallback({
+        "headers": {
+          "schema": "st-schema",
+          "version": "1.0",
+          "interactionType": "integrationDeleted",
+          "requestId": "B30F2993-0BE4-464B-9506-1FF686072FA1"
+        },
+        "authentication": {
+          "tokenType": "Bearer",
+          "token": "1xlHR91DyjUJBYsSAvxAw8AT"
+        }
+      });
+
+      response.should.have.property('headers');
+      response.headers.schema.should.equal('st-schema');
+      response.headers.version.should.equal('1.0');
+      response.headers.interactionType.should.equal('integrationDeleted');
+      response.headers.requestId.should.equal('B30F2993-0BE4-464B-9506-1FF686072FA1');
+    });
+  });
+
+  describe('handlerCallbackError', function() {
+    it('Should handle thrown error', async function() {
+      const response = await errorConnector.handleCallback({
+        "headers": {
+          "schema": "st-schema",
+          "version": "1.0",
+          "interactionType": "discoveryRequest",
+          "requestId": "0edb967a-380e-4699-968e-64ea31cef618"
+        },
+        "authentication": {
+          "tokenType": "Bearer",
+          "token": "ACCT-HCtR4Q"
+        }
+      });
+
+      response.should.be.instanceOf(Error)
+    });
+  });
+
+  describe('httpHandlerCallback', function() {
+    it('Should return proper discovery response', async function() {
+      const res = new HttpResponse()
+      await schemaConnector.handleHttpCallback({
+        body: {
+          "headers": {
+            "schema": "st-schema",
+            "version": "1.0",
+            "interactionType": "discoveryRequest",
+            "requestId": "0edb967a-380e-4699-968e-64ea31cef618"
+          },
+          "authentication": {
+            "tokenType": "Bearer",
+            "token": "ACCT-HCtR4Q"
+          }
+        }
+      }, res);
+
+      const response = res.data
+      response.should.have.property('headers');
+      response.headers.schema.should.equal('st-schema');
+      response.headers.version.should.equal('1.0');
+      response.headers.interactionType.should.equal('discoveryResponse');
+      response.headers.requestId.should.equal('0edb967a-380e-4699-968e-64ea31cef618');
+
+      response.should.have.property('devices');
+      response.devices.length.should.equal(1);
+      response.devices[0].externalDeviceId.should.equal('abcd');
+      response.devices[0].friendlyName.should.equal('Test Switch 1');
+      response.devices[0].deviceHandlerType.should.equal('c2c-switch');
+    });
+
+    it('Should handle error response', async function() {
+      const res = new HttpResponse()
+      await schemaConnector.handleHttpCallback(
+        {body: {
+            "headers": {
+              "schema": "st-schema",
+              "version": "1.0",
+              "interactionType": "discoveryRequest",
+              "requestId": "0edb967a-380e-4699-968e-64ea31cef618"
+            }
+          }
+        }, res);
+
+      res.statusCode.should.equal(500)
+    });
+
+    it('Should handle thrown error', async function() {
+      const res = new HttpResponse()
+      await errorConnector.handleHttpCallback(
+        {body: {
+            "headers": {
+              "schema": "st-schema",
+              "version": "1.0",
+              "interactionType": "discoveryRequest",
+              "requestId": "0edb967a-380e-4699-968e-64ea31cef618"
+            },
+            "authentication": {
+              "tokenType": "Bearer",
+              "token": "ACCT-HCtR4Q"
+            }
+          }}, res);
+
+      res.statusCode.should.equal(500)
+    });
+  });
+
+  describe('lambdaHandlerCallback', function() {
+    it('Should return proper discovery response', async function() {
+      const context = new LambdaContext()
+      await schemaConnector.handleLambdaCallback({
+        "headers": {
+          "schema": "st-schema",
+          "version": "1.0",
+          "interactionType": "discoveryRequest",
+          "requestId": "0edb967a-380e-4699-968e-64ea31cef618"
+        },
+        "authentication": {
+          "tokenType": "Bearer",
+          "token": "ACCT-HCtR4Q"
+        }
+      }, context);
+
+      const response = context.success
+      response.should.have.property('headers');
+      response.headers.schema.should.equal('st-schema');
+      response.headers.version.should.equal('1.0');
+      response.headers.interactionType.should.equal('discoveryResponse');
+      response.headers.requestId.should.equal('0edb967a-380e-4699-968e-64ea31cef618');
+
+      response.should.have.property('devices');
+      response.devices.length.should.equal(1);
+      response.devices[0].externalDeviceId.should.equal('abcd');
+      response.devices[0].friendlyName.should.equal('Test Switch 1');
+      response.devices[0].deviceHandlerType.should.equal('c2c-switch');
+    });
+
+    it('Should handle error response', async function() {
+      const context = new LambdaContext()
+      await schemaConnector.handleLambdaCallback(
+        {body: {
+            "headers": {
+              "schema": "st-schema",
+              "version": "1.0",
+              "interactionType": "discoveryRequest",
+              "requestId": "0edb967a-380e-4699-968e-64ea31cef618"
+            }
+          }
+        }, context);
+
+      context.should.haveOwnProperty('failure')
+      context.should.not.haveOwnProperty('success')
+    });
+
+    it('Should handle thrown error', async function() {
+      const context = new LambdaContext()
+      await errorConnector.handleLambdaCallback(
+        {body: {
+            "headers": {
+              "schema": "st-schema",
+              "version": "1.0",
+              "interactionType": "discoveryRequest",
+              "requestId": "0edb967a-380e-4699-968e-64ea31cef618"
+            },
+            "authentication": {
+              "tokenType": "Bearer",
+              "token": "ACCT-HCtR4Q"
+            }
+          }}, context);
+
+      context.should.haveOwnProperty('failure')
+      context.should.not.haveOwnProperty('success')
+    });
+  });
+
 });
