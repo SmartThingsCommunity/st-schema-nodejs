@@ -2,6 +2,7 @@
 
 const SchemaConnector = require('../../lib/SchemaConnector');
 const AccessTokenRequest = require('../../lib/callbacks/AccessTokenRequest');
+const DeviceErrorTypes = require('../../lib/errors/device-error-types')
 const sinon = require('sinon');
 
 let interactionResultCount = 0;
@@ -43,26 +44,38 @@ const schemaConnector = new SchemaConnector()
   .discoveryHandler((accessToken, response) => {
     response.addDevice('abcd', 'Test Switch 1', 'c2c-switch')
   })
-  .stateRefreshHandler((accessToken, response) => {
-    response.addDevice('abcd', [
-      {
-        component: 'main',
-        capability: 'st.switch',
-        attribute: 'switch',
-        value: 'off'
+  .stateRefreshHandler((accessToken, response, data) => {
+    for (const device of data.devices) {
+      if (device.externalDeviceId === 'abcd') {
+        response.addDevice('abcd', [
+          {
+            component: 'main',
+            capability: 'st.switch',
+            attribute: 'switch',
+            value: 'off'
+          }
+        ])
+      } else {
+        response.addDevice(device.externalDeviceId, [])
+          .setError('Device not found', DeviceErrorTypes.DEVICE_DELETED)
       }
-    ])
+    }
   })
   .commandHandler((accessToken, response, devices) => {
     for (const device of devices) {
-      response.addDevice(device.externalDeviceId, device.commands.map(cmd => {
-        return {
-          component: cmd.component,
-          capability: cmd.capability,
-          attribute: 'switch',
-          value: cmd.command === 'on' ? 'on' : 'off'
-        }
-      }))
+      if (device.externalDeviceId === 'abcd') {
+        response.addDevice(device.externalDeviceId, device.commands.map(cmd => {
+          return {
+            component: cmd.component,
+            capability: cmd.capability,
+            attribute: 'switch',
+            value: cmd.command === 'on' ? 'on' : 'off'
+          }
+        }))
+      } else {
+        response.addDevice(device.externalDeviceId, [])
+          .setError('Device not found', DeviceErrorTypes.DEVICE_DELETED)
+      }
     }
   })
   .integrationDeletedHandler(accessToken => {
@@ -206,7 +219,17 @@ describe('SchemaConnector', function() {
         "authentication": {
           "tokenType": "Bearer",
           "token": "ACCT-HCtR4Q"
-        }
+        },
+        "devices": [
+          {
+            "externalDeviceId": "abcd",
+            "deviceCookie": {}
+          },
+          {
+            "externalDeviceId": "wxyz",
+            "deviceCookie": {}
+          }
+        ]
       });
 
       response.should.have.property('headers');
@@ -216,13 +239,17 @@ describe('SchemaConnector', function() {
       response.headers.requestId.should.equal('8C58E0CD-386F-4BBB-80B9-B28A7FF8040F');
 
       response.should.have.property('deviceState');
-      response.deviceState.length.should.equal(1);
+      response.deviceState.length.should.equal(2);
       response.deviceState[0].externalDeviceId.should.equal('abcd');
       response.deviceState[0].states.length.should.equal(1);
       response.deviceState[0].states[0].component.should.equal('main');
       response.deviceState[0].states[0].capability.should.equal('st.switch');
       response.deviceState[0].states[0].attribute.should.equal('switch');
       response.deviceState[0].states[0].value.should.equal('off');
+
+      response.deviceState[1].externalDeviceId.should.equal('wxyz');
+      response.deviceState[1].deviceError[0].detail.should.equal('Device not found')
+      response.deviceState[1].deviceError[0].errorEnum.should.equal('DEVICE-DELETED')
     });
   });
 
@@ -314,6 +341,49 @@ describe('SchemaConnector', function() {
       response.deviceState[0].states[0].capability.should.equal('st.switch');
       response.deviceState[0].states[0].attribute.should.equal('switch');
       response.deviceState[0].states[0].value.should.equal('off')
+    });
+  });
+
+  describe('commandRequest missing device', function() {
+    it('Should return error response', async function() {
+      const response = await schemaConnector.handleCallback({
+        "headers": {
+          "schema": "st-schema",
+          "version": "1.0",
+          "interactionType": "commandRequest",
+          "requestId": "3d41b3d6-b328-68b8-351a-8c0c2303adb1"
+        },
+        "authentication": {
+          "tokenType": "Bearer",
+          "token": "ACCT-HCtR4Q"
+        },
+        "devices": [
+          {
+            "externalDeviceId": "wxyz",
+            "deviceCookie": {},
+            "commands": [
+              {
+                "component": "main",
+                "capability": "st.switch",
+                "command": "off"
+              }
+            ]
+          }
+        ]
+      });
+
+      response.should.have.property('headers');
+      response.headers.schema.should.equal('st-schema');
+      response.headers.version.should.equal('1.0');
+      response.headers.interactionType.should.equal('commandResponse');
+      response.headers.requestId.should.equal('3d41b3d6-b328-68b8-351a-8c0c2303adb1');
+
+      response.should.have.property('deviceState');
+      response.deviceState.length.should.equal(1);
+      response.deviceState[0].externalDeviceId.should.equal('wxyz');
+      response.deviceState[0].deviceError.length.should.equal(1);
+      response.deviceState[0].deviceError[0].errorEnum.should.equal('DEVICE-DELETED');
+      response.deviceState[0].deviceError[0].detail.should.equal('Device not found');
     });
   });
 
