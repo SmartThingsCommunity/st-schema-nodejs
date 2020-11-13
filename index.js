@@ -23,5 +23,7 @@ module.exports = {
   DiscoveryResponse: require('./lib/discovery/DiscoveryResponse'),
   SchemaConnector: require('./lib/SchemaConnector'),
   StateRefreshResponse: require('./lib/state/StateRefreshResponse'),
-  StateUpdateRequest: require('./lib/callbacks/StateUpdateRequest')
+  StateUpdateRequest: require('./lib/callbacks/StateUpdateRequest'),
+  STBase: require('./lib/STBase'),
+  checkFetchStatus: require('./lib/util/checkFetchStatus')
 };
