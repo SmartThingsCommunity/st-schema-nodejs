@@ -1,6 +1,6 @@
 {
   "name": "st-schema",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "SmartThings Schema for C2C integration",
   "main": "index.js",
   "directories": {
