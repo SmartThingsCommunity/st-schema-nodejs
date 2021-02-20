@@ -17,10 +17,10 @@ const connector = new SchemaConnector()
      * @response {DiscoveryResponse} Discovery response object
      */
   })
-  .stateRefreshHandler((accessToken, response) => {
+  .stateRefreshHandler((accessToken, response, data) => {
     /**
-     * State refresh request. Respond with the current states of all devices. Called after
-     * device discovery runs.
+     * State refresh request. Respond with the current states of the requested devices. Called after
+     * device discovery runs and every time the information is refreshed, the list of required devices is in data.devices
      * @accessToken External cloud access token
      * @response {StateRefreshResponse} StateRefresh response object
      */
