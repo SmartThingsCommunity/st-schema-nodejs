@@ -607,7 +607,7 @@ describe('SchemaConnector', function() {
           }
         }, res);
 
-      res.statusCode.should.equal(500)
+      res.statusCode.should.equal(200)
     });
 
     it('Should handle thrown error', async function() {
@@ -673,8 +673,8 @@ describe('SchemaConnector', function() {
           }
         }, context);
 
-      context.should.haveOwnProperty('failure')
-      context.should.not.haveOwnProperty('success')
+      context.should.haveOwnProperty('success')
+      context.should.not.haveOwnProperty('failure')
     });
 
     it('Should handle thrown error', async function() {
@@ -693,8 +693,8 @@ describe('SchemaConnector', function() {
             }
           }}, context);
 
-      context.should.haveOwnProperty('failure')
-      context.should.not.haveOwnProperty('success')
+      context.should.haveOwnProperty('success')
+      context.should.not.haveOwnProperty('failure')
     });
   });
 
