@@ -8,10 +8,7 @@ const sinon = require('sinon');
 let interactionResultCount = 0;
 const testClientId = 'xxxx';
 const testClientSecret = 'yyyy';
-const testCallbackUrls = {
-  oauthToken: 'https://smartthings/token',
-  stateCallback: 'https://smartthings/callback'
-};
+
 const textCallbackAuth = {
   accessToken: 'aaaa-zzzz',
   refreshToken: 'yyyy-bbbb'
@@ -169,7 +166,7 @@ describe('SchemaConnector', function() {
         }
       });
 
-      const response = await schemaConnector.handleCallback({
+      await schemaConnector.handleCallback({
         "headers": {
           "schema": "st-schema",
           "version": "1.0",
@@ -608,6 +605,7 @@ describe('SchemaConnector', function() {
         }, res);
 
       res.statusCode.should.equal(200)
+      res.data.globalError.errorEnum.should.equal('BAD-REQUEST')
     });
 
     it('Should handle thrown error', async function() {
@@ -627,6 +625,32 @@ describe('SchemaConnector', function() {
           }}, res);
 
       res.statusCode.should.equal(500)
+    });
+
+    it('Should handle empty request', async function() {
+      const res = new HttpResponse()
+      await schemaConnector.handleHttpCallback(
+          {body: {}
+          }, res);
+
+      res.statusCode.should.equal(200)
+      res.data.globalError.errorEnum.should.equal('BAD-REQUEST')
+    });
+
+    it('Should handle missing auth', async function() {
+      const res = new HttpResponse()
+      await schemaConnector.handleHttpCallback(
+          {body: {
+              "headers": {
+                "schema": "st-schema",
+                "version": "1.0",
+                "interactionType": "discoveryRequest",
+                "requestId": "0edb967a-380e-4699-968e-64ea31cef618"
+              }}
+          }, res);
+
+      res.statusCode.should.equal(200)
+      res.data.globalError.errorEnum.should.equal('BAD-REQUEST')
     });
   });
 
