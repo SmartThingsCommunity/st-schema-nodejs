@@ -1,6 +1,6 @@
 {
   "name": "st-schema",
-  "version": "1.4.3",
+  "version": "1.5.0",
   "description": "SmartThings Schema for C2C integration",
   "main": "index.js",
   "directories": {
@@ -22,8 +22,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "camelcase": "6.2.0",
-    "node-fetch": "^2.6.7",
-    "request": "2.88.0"
+    "node-fetch": "^2.6.7"
   },
   "devDependencies": {
     "chai": "4.2.0",
